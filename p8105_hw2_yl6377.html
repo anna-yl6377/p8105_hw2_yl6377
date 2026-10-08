@@ -481,7 +481,7 @@ compliant?</p>
 
 route_A_ada</code></pre>
 <pre><code>## [1] 17</code></pre>
-<p>Problem 2 # analysis data</p>
+<p>Problem 2 # data analysis of trash wheel</p>
 <p>Mr. Trash Wheel Sheet</p>
 <pre class="r"><code>mr_trash_wheel =
   read_excel(
@@ -540,7 +540,7 @@ route_A_ada</code></pre>
     professor_trash_wheel,
     gwynnda
   )</code></pre>
-<p>What was the total weight of trash collected by Professor Trash
+<p>2.1 What was the total weight of trash collected by Professor Trash
 Wheel?</p>
 <pre class="r"><code>professor_total_weight =
 all_trash_wheel |&gt;
@@ -548,8 +548,8 @@ all_trash_wheel |&gt;
   summarise(
     total_weight = sum(weight_tons, na.rm = TRUE)
   )</code></pre>
-<p>What was the total number of cigarette butts collected by Gwynnda in
-June of 2022?</p>
+<p>2.2 What was the total number of cigarette butts collected by Gwynnda
+in June of 2022?</p>
 <pre class="r"><code>gwynnda_june_2022 =
 all_trash_wheel |&gt;
   filter(
@@ -568,6 +568,130 @@ plastic_bags, wrappers, sports_balls, homes_powered, trash_wheel. For
 the available data, Professor Trash Wheel collected a total of 294.96
 tons of trash. Gwynnda collected a total of 1.812^{4} cigarette butts in
 June 2022.</p>
+<p>Problem 3 # data analysis of AD biomarkers observation</p>
+<p>Import, clean, and tidy baseline demographics</p>
+<pre class="r"><code>baseline_raw =
+  read_csv(
+    &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/data_mci/MCI_baseline.csv&quot;,
+    skip = 1,
+    na = c(&quot;.&quot;, &quot;Na&quot;, &quot;&quot;)
+  ) |&gt;
+  janitor::clean_names() </code></pre>
+<pre><code>## Rows: 483 Columns: 6
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## dbl (6): ID, Current Age, Sex, Education, apoe4, Age at onset
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>baseline =
+  baseline_raw |&gt;
+  mutate(
+    sex = factor(
+      sex,
+      levels = c(0, 1),
+      labels = c(&quot;Female&quot;, &quot;Male&quot;)
+    ),
+    apoe4 = factor(
+      apoe4,
+      levels = c(0, 1),
+      labels = c(&quot;Non-carrier&quot;, &quot;Carrier&quot;)
+    )
+  ) |&gt;
+  filter(
+    is.na(age_at_onset) | age_at_onset &gt; current_age
+  )</code></pre>
+<p>3.1 How many participants were recruited?</p>
+<pre class="r"><code>  nrow(baseline_raw)</code></pre>
+<pre><code>## [1] 483</code></pre>
+<p>3.2 How many are eligible after inclusion criterion?</p>
+<pre class="r"><code>  nrow(baseline)</code></pre>
+<pre><code>## [1] 479</code></pre>
+<p>3.3 Of eligible participants, how many developed MCI?</p>
+<pre class="r"><code>  sum(!is.na(baseline$age_at_onset))</code></pre>
+<pre><code>## [1] 93</code></pre>
+<p>3.4 The average baseline age is</p>
+<pre class="r"><code>  mean(baseline$current_age, na.rm = TRUE)</code></pre>
+<pre><code>## [1] 65.0286</code></pre>
+<p>3.5 Proportion of women who are APOE4 carriers</p>
+<pre class="r"><code>baseline |&gt;
+  filter(sex == &quot;Female&quot;) |&gt;
+  summarise(
+    proportion = mean(apoe4 == &quot;Carrier&quot;, na.rm = TRUE)
+  )</code></pre>
+<pre><code>## # A tibble: 1 × 1
+##   proportion
+##        &lt;dbl&gt;
+## 1        0.3</code></pre>
+<p>3.6 Import and tidy longitudinal amyloid data</p>
+<pre class="r"><code>amyloid =
+  read_csv(
+    &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/data_mci//mci_amyloid.csv&quot;,
+    skip = 1,
+    na = c(&quot;Na&quot;, &quot;&quot;)
+  ) |&gt;
+  janitor::clean_names() |&gt;
+  rename(
+    id = study_id
+  ) |&gt;
+  pivot_longer(
+    cols = -id,
+    names_to = &quot;visit&quot;,
+    values_to = &quot;amyloid_42_40&quot;
+  ) |&gt;
+  mutate(
+    amyloid_42_40 = as.numeric(amyloid_42_40)
+  )</code></pre>
+<pre><code>## Rows: 487 Columns: 6
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (5): Baseline, Time 2, Time 4, Time 6, Time 8
+## dbl (1): Study ID
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre><code>## Warning: There was 1 warning in `mutate()`.
+## ℹ In argument: `amyloid_42_40 = as.numeric(amyloid_42_40)`.
+## Caused by warning:
+## ! NAs introduced by coercion</code></pre>
+<p>3.7 Check participants only in amyloid</p>
+<pre class="r"><code>amyloid_only =
+  amyloid |&gt;
+  distinct(id) |&gt;
+  anti_join(
+    baseline,
+    by = &quot;id&quot;
+  )
+
+nrow(amyloid_only)</code></pre>
+<pre><code>## [1] 16</code></pre>
+<p>3.8 Find participants in both datasets</p>
+<pre class="r"><code>intersect(
+  baseline$id,
+  unique(amyloid$id)
+) |&gt;
+  length()</code></pre>
+<pre><code>## [1] 471</code></pre>
+<p>3.9 Combine the two datasets</p>
+<pre class="r"><code>all_mci =
+  inner_join(
+    baseline,
+    amyloid,
+    by = &quot;id&quot;
+  )</code></pre>
+<p>3.10 Export the final dataset</p>
+<pre class="r"><code>write_csv(
+  all_mci,
+  &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/data_mci/mci_result.csv&quot;
+)</code></pre>
+<p>Description: A total of 483 participants were recruited. After
+applying the inclusion criterion that participants were free of MCI at
+baseline, 479 participants remained. Of these eligible participants, 93
+developed MCI during follow-up. The average baseline age was 65.03
+years. Among women, 30% were APOE4 carriers. The two datasets were
+combined using an inner join, retaining 471 participants who were
+present in both datasets. The final dataset contains 2355 observations
+and 8 variables.</p>
 
 
 

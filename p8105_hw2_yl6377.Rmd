@@ -115,7 +115,7 @@ route_A_ada
 ```
 
 Problem 2
-# analysis data
+# data analysis of trash wheel
 
 Mr. Trash Wheel Sheet
 ```{r}
@@ -180,7 +180,7 @@ all_trash_wheel =
   )
 ```
 
-What was the total weight of trash collected by Professor Trash Wheel? 
+2.1 What was the total weight of trash collected by Professor Trash Wheel? 
 ```{r}
 professor_total_weight =
 all_trash_wheel |>
@@ -190,7 +190,7 @@ all_trash_wheel |>
   )
 ```
 
-What was the total number of cigarette butts collected by Gwynnda in June of 2022?
+2.2 What was the total number of cigarette butts collected by Gwynnda in June of 2022?
 ```{r}
 gwynnda_june_2022 =
 all_trash_wheel |>
@@ -206,4 +206,135 @@ all_trash_wheel |>
 
 The resulting dataset contains `r nrow(all_trash_wheel)` observations from Mr. Trash Wheel, Professor Trash Wheel, and Gwynnda. Key variables include `r names(all_trash_wheel)`. For the available data, Professor Trash Wheel collected a total of `r professor_total_weight` tons of trash. Gwynnda collected a total of `r gwynnda_june_2022` cigarette butts in June 2022.
 
+Problem 3
+# data analysis of AD biomarkers observation
 
+Import, clean, and tidy baseline demographics
+```{r}
+baseline_raw =
+  read_csv(
+    "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/data_mci/MCI_baseline.csv",
+    skip = 1,
+    na = c(".", "Na", "")
+  ) |>
+  janitor::clean_names() 
+```
+
+```{r}
+baseline =
+  baseline_raw |>
+  mutate(
+    sex = factor(
+      sex,
+      levels = c(0, 1),
+      labels = c("Female", "Male")
+    ),
+    apoe4 = factor(
+      apoe4,
+      levels = c(0, 1),
+      labels = c("Non-carrier", "Carrier")
+    )
+  ) |>
+  filter(
+    is.na(age_at_onset) | age_at_onset > current_age
+  )
+```
+
+3.1 How many participants were recruited?
+```{r}
+  nrow(baseline_raw)
+```
+
+3.2 How many are eligible after inclusion criterion?
+```{r}
+  nrow(baseline)
+```
+
+3.3 Of eligible participants, how many developed MCI?
+```{r}
+  sum(!is.na(baseline$age_at_onset))
+```
+
+3.4 The average baseline age is 
+```{r}
+  mean(baseline$current_age, na.rm = TRUE)
+```
+
+3.5 Proportion of women who are APOE4 carriers
+```{r}
+baseline |>
+  filter(sex == "Female") |>
+  summarise(
+    proportion = mean(apoe4 == "Carrier", na.rm = TRUE)
+  )
+```
+
+3.6 Import and tidy longitudinal amyloid data
+```{r}
+amyloid =
+  read_csv(
+    "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/data_mci//mci_amyloid.csv",
+    skip = 1,
+    na = c("Na", "")
+  ) |>
+  janitor::clean_names() |>
+  rename(
+    id = study_id
+  ) |>
+  pivot_longer(
+    cols = -id,
+    names_to = "visit",
+    values_to = "amyloid_42_40"
+  ) |>
+  mutate(
+    amyloid_42_40 = as.numeric(amyloid_42_40)
+  )
+```
+3.7 Check participants only in amyloid
+```{r}
+amyloid_only =
+  amyloid |>
+  distinct(id) |>
+  anti_join(
+    baseline,
+    by = "id"
+  )
+
+nrow(amyloid_only)
+```
+
+3.8 Find participants in both datasets
+```{r}
+intersect(
+  baseline$id,
+  unique(amyloid$id)
+) |>
+  length()
+```
+
+3.9 Combine the two datasets
+```{r}
+all_mci =
+  inner_join(
+    baseline,
+    amyloid,
+    by = "id"
+  )
+```
+
+3.10 Export the final dataset
+```{r}
+write_csv(
+  all_mci,
+  "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/data_mci/mci_result.csv"
+)
+```
+
+Description:
+A total of `r nrow(baseline_raw)` participants were recruited. After applying the
+inclusion criterion that participants were free of MCI at baseline,
+`r nrow(baseline)` participants remained. Of these eligible participants,
+`r sum(!is.na(baseline$age_at_onset))` developed MCI during follow-up.
+The average baseline age was `r round(mean(baseline$current_age, na.rm = TRUE), 2)` years.
+Among women, `r mean(baseline$apoe4[baseline$sex == "Female"] == "Carrier", na.rm = TRUE) * 100`% were APOE4 carriers.
+The two datasets were combined using an inner join, retaining `r n_distinct(all_mci$id)` participants who were present in both datasets. The final dataset contains `r nrow(all_mci)` observations and `r ncol(all_mci)` variables.
