@@ -366,22 +366,13 @@ display: none;
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()
 ## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
-<p>Problem 1 # read and clean data</p>
+<pre class="r"><code>library(readxl)</code></pre>
+<p>Problem 1 # read and clean NYC Transit data</p>
 <pre class="r"><code>nyc_transit =
   read_csv(
     &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/NYC_Transit_Subway_Entrance_And_Exit_Data.csv&quot;,
     na = c(&quot;&quot;,&quot;NA&quot;,&quot;.&quot;)
-  )</code></pre>
-<pre><code>## Rows: 1868 Columns: 32
-## ── Column specification ────────────────────────────────────────────────────────
-## Delimiter: &quot;,&quot;
-## chr (22): Division, Line, Station Name, Route1, Route2, Route3, Route4, Rout...
-## dbl  (8): Station Latitude, Station Longitude, Route8, Route9, Route10, Rout...
-## lgl  (2): ADA, Free Crossover
-## 
-## ℹ Use `spec()` to retrieve the full column specification for this data.
-## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
-<pre class="r"><code>nyc_transit = nyc_transit |&gt;
+  )|&gt;
   select(
     line = `Line`,
     division = `Division`,
@@ -411,6 +402,15 @@ display: none;
       &quot;NO&quot; ~ FALSE
     )
   )</code></pre>
+<pre><code>## Rows: 1868 Columns: 32
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (22): Division, Line, Station Name, Route1, Route2, Route3, Route4, Rout...
+## dbl  (8): Station Latitude, Station Longitude, Route8, Route9, Route10, Rout...
+## lgl  (2): ADA, Free Crossover
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre><code>## Warning: There was 1 warning in `mutate()`.
 ## ℹ In argument: `entry = case_match(entry, &quot;YES&quot; ~ TRUE, &quot;NO&quot; ~ FALSE)`.
 ## Caused by warning:
@@ -481,6 +481,93 @@ compliant?</p>
 
 route_A_ada</code></pre>
 <pre><code>## [1] 17</code></pre>
+<p>Problem 2 # analysis data</p>
+<p>Mr. Trash Wheel Sheet</p>
+<pre class="r"><code>mr_trash_wheel =
+  read_excel(
+    &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/202610 Trash Wheel Collection Data.xlsx&quot;,
+    sheet = &quot;Mr. Trash Wheel&quot;,
+    skip = 1
+  )|&gt;
+  janitor::clean_names()|&gt;
+  select(1:14) |&gt;
+  drop_na(dumpster) |&gt;
+  mutate(
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles),
+    sports_balls = as.integer(round(sports_balls)),
+    trash_wheel = &quot;Mr. Trash Wheel&quot;
+  )</code></pre>
+<pre><code>## New names:
+## • `` -&gt; `...15`
+## • `` -&gt; `...16`</code></pre>
+<p>Professor Trash Wheel Sheet</p>
+<pre class="r"><code>professor_trash_wheel =
+  read_excel(
+    &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/202610 Trash Wheel Collection Data.xlsx&quot;,
+    sheet = &quot;Professor Trash Wheel&quot;,
+    skip=1
+  )|&gt;
+  janitor::clean_names()|&gt;
+  drop_na(dumpster) |&gt;
+  mutate(
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles),
+    trash_wheel = &quot;Professor Trash Wheel&quot;
+  )</code></pre>
+<pre><code>## Warning: There was 1 warning in `mutate()`.
+## ℹ In argument: `plastic_bottles = as.numeric(plastic_bottles)`.
+## Caused by warning:
+## ! NAs introduced by coercion</code></pre>
+<p>Gwynnda the Good Wheel of the W</p>
+<pre class="r"><code>gwynnda =
+  read_excel(
+    &quot;/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/202610 Trash Wheel Collection Data.xlsx&quot;,
+    sheet = &quot;Gwynnda the Good Wheel of the W&quot;,
+    skip = 1
+  )|&gt;
+  janitor::clean_names()|&gt;
+  drop_na(dumpster) |&gt;
+  mutate(
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles),
+    trash_wheel = &quot;Gwynnda&quot;
+  )</code></pre>
+<p>Combine the three datasets</p>
+<pre class="r"><code>all_trash_wheel =
+  bind_rows(
+    mr_trash_wheel,
+    professor_trash_wheel,
+    gwynnda
+  )</code></pre>
+<p>What was the total weight of trash collected by Professor Trash
+Wheel?</p>
+<pre class="r"><code>professor_total_weight =
+all_trash_wheel |&gt;
+  filter(trash_wheel == &quot;Professor Trash Wheel&quot;) |&gt;
+  summarise(
+    total_weight = sum(weight_tons, na.rm = TRUE)
+  )</code></pre>
+<p>What was the total number of cigarette butts collected by Gwynnda in
+June of 2022?</p>
+<pre class="r"><code>gwynnda_june_2022 =
+all_trash_wheel |&gt;
+  filter(
+    trash_wheel == &quot;Gwynnda&quot;,
+    year == 2022,
+    str_trim(month) == &quot;June&quot;
+  ) |&gt;
+  summarise(
+    total_cigarette_butts = sum(cigarette_butts, na.rm = TRUE)
+  )</code></pre>
+<p>The resulting dataset contains 1269 observations from Mr. Trash
+Wheel, Professor Trash Wheel, and Gwynnda. Key variables include
+dumpster, month, year, date, weight_tons, volume_cubic_yards,
+plastic_bottles, polystyrene, cigarette_butts, glass_bottles,
+plastic_bags, wrappers, sports_balls, homes_powered, trash_wheel. For
+the available data, Professor Trash Wheel collected a total of 294.96
+tons of trash. Gwynnda collected a total of 1.812^{4} cigarette butts in
+June 2022.</p>
 
 
 

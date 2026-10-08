@@ -9,16 +9,17 @@ date: "2026-10-05"
 
 ```{r}
 library(tidyverse)
+library(readxl)
 ```
+
 Problem 1
-# read and clean data
+# read and clean NYC Transit data
 ```{r}
 nyc_transit =
   read_csv(
     "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/NYC_Transit_Subway_Entrance_And_Exit_Data.csv",
     na = c("","NA",".")
-  )
-nyc_transit = nyc_transit |>
+  )|>
   select(
     line = `Line`,
     division = `Division`,
@@ -112,3 +113,97 @@ route_A_ada =
 
 route_A_ada
 ```
+
+Problem 2
+# analysis data
+
+Mr. Trash Wheel Sheet
+```{r}
+mr_trash_wheel =
+  read_excel(
+    "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/202610 Trash Wheel Collection Data.xlsx",
+    sheet = "Mr. Trash Wheel",
+    skip = 1
+  )|>
+  janitor::clean_names()|>
+  select(1:14) |>
+  drop_na(dumpster) |>
+  mutate(
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles),
+    sports_balls = as.integer(round(sports_balls)),
+    trash_wheel = "Mr. Trash Wheel"
+  )
+```
+
+Professor Trash Wheel Sheet
+```{r}
+professor_trash_wheel =
+  read_excel(
+    "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/202610 Trash Wheel Collection Data.xlsx",
+    sheet = "Professor Trash Wheel",
+    skip=1
+  )|>
+  janitor::clean_names()|>
+  drop_na(dumpster) |>
+  mutate(
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles),
+    trash_wheel = "Professor Trash Wheel"
+  )
+```
+
+Gwynnda the Good Wheel of the W
+```{r}
+gwynnda =
+  read_excel(
+    "/Users/anna/Desktop/CU/Data Science I/p8105_hw2_yl6377/202610 Trash Wheel Collection Data.xlsx",
+    sheet = "Gwynnda the Good Wheel of the W",
+    skip = 1
+  )|>
+  janitor::clean_names()|>
+  drop_na(dumpster) |>
+  mutate(
+    year = as.numeric(year),
+    plastic_bottles = as.numeric(plastic_bottles),
+    trash_wheel = "Gwynnda"
+  )
+```
+
+Combine the three datasets
+```{r}
+all_trash_wheel =
+  bind_rows(
+    mr_trash_wheel,
+    professor_trash_wheel,
+    gwynnda
+  )
+```
+
+What was the total weight of trash collected by Professor Trash Wheel? 
+```{r}
+professor_total_weight =
+all_trash_wheel |>
+  filter(trash_wheel == "Professor Trash Wheel") |>
+  summarise(
+    total_weight = sum(weight_tons, na.rm = TRUE)
+  )
+```
+
+What was the total number of cigarette butts collected by Gwynnda in June of 2022?
+```{r}
+gwynnda_june_2022 =
+all_trash_wheel |>
+  filter(
+    trash_wheel == "Gwynnda",
+    year == 2022,
+    str_trim(month) == "June"
+  ) |>
+  summarise(
+    total_cigarette_butts = sum(cigarette_butts, na.rm = TRUE)
+  )
+```
+
+The resulting dataset contains `r nrow(all_trash_wheel)` observations from Mr. Trash Wheel, Professor Trash Wheel, and Gwynnda. Key variables include `r names(all_trash_wheel)`. For the available data, Professor Trash Wheel collected a total of `r professor_total_weight` tons of trash. Gwynnda collected a total of `r gwynnda_june_2022` cigarette butts in June 2022.
+
+
